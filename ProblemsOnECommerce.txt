@@ -1,0 +1,299 @@
+1.Retrieve all products along with their total sales revenue from completed orders.
+
+select p.product_name,sum(s.quantity*s.price_per_unit) Total_sales
+from products p inner join sales s
+on p.product_id=s.product_id
+where s.order_status='Completed'
+group by p.product_id,p.product_name;
+
+2.List all customers and the products they have purchased, showing only those who have ordered more than two products.
+
+select c.customer_name,p.product_name
+from products p inner join sales s
+on p.product_id=s.product_id
+join customers c
+on c.customer_id=s.customer_id
+where c.customer_id in (select c.customer_id
+                      from sales s inner join customers c
+                      on c.customer_id=s.customer_id
+                      group by c.customer_id
+                      having count(distinct s.product_id)>2);
+
+3.Find the average order value per customer for orders with a quantity of more than 5.
+
+select c.customer_name,round(avg(s.quantity*s.price_per_unit),2) avg_order_vale
+from customers c inner join sales s
+on c.customer_id=s.customer_id
+where s.quantity >5
+group by c.customer_id,c.customer_name;
+
+4.Get the top 5 customers by total spending on 'Accessories'.
+
+select customer_name,total
+from(select c.customer_name,sum(s.quantity*s.price_per_unit) total,dense_rank() over(order by sum(s.quantity*s.price_per_unit) desc) d_rank
+from customers c inner join sales s
+on c.customer_id=s.customer_id
+                       inner join products p
+on s.product_id=p.product_id
+where p.category='Accessories'
+group by c.customer_name,c.customer_id)
+where d_rank<=5;
+
+5.Find the most popular product based on total quantity sold in 2023.
+
+select product_name
+from(select p.product_name,sum(quantity) sold_items,dense_rank() over(order by sum(quantity) desc) rank_s
+from sales s inner join products p
+on s.product_id=p.product_id
+where order_status='Completed' and extract(year from order_date) = 2023
+group by p.product_id,p.product_name)
+where rank_s=1;
+
+6.List all orders that were cancelled and the reason for cancellation (if available).
+
+select order_id
+from sales
+where order_status='Cancelled';
+
+7.Retrieve the total quantity of products sold by category in 2023.
+
+select p.category,sum(s.quantity) sum_of_quantity
+from products p inner join sales s
+on p.product_id=s.product_id
+where extract(year from s.order_date)=2023
+group by p.category;
+
+8.Find the customers who have made the most purchases in a single month.
+
+select customer_id,customer_name
+from(select c.customer_id,c.customer_name,count(*),dense_rank() over(order by count(*) desc) rank1
+from customers c inner join sales s
+on c.customer_id=s.customer_id
+group by c.customer_id,c.customer_name,to_char(s.order_date,'mon'))
+where rank1=1;
+
+9.List the products that have never been ordered (use LEFT JOIN between products and sales).
+
+select p.product_name
+from products p left join sales s
+on p.product_id=s.product_id
+where s.order_id is null;
+
+10.Retrieve a list of all customers with their corresponding product names they ordered (use an INNER JOIN between customers and sales tables).
+
+select c.customer_name,p.product_name
+from customers c left join sales s
+on c.customer_id=s.customer_id
+                   join products p
+on s.product_id=p.product_id; 
+
+11.List all products and show the details of customers who have placed orders for them. Include products that have no orders (use a LEFT JOIN between products and sales tables).
+
+select p.product_name,c.customer_name
+from products p left  join sales s
+on p.product_id=s.product_id
+                  left join customers c 
+on s.customer_id=c.customer_id;
+
+12.List all orders and their shipping status. Include orders that do not have any shipping records (use a LEFT JOINbetween sales and shippings tables).
+
+select s.order_id,sh.delivery_status
+from sales s left join shippings sh
+on s.order_id=sh.order_id;
+
+13.Retrieve all products, including those with no orders, along with their price. Use a RIGHT JOIN between the products and sales tables.
+
+select p.product_name,p.price
+from sales s right join products p
+on s.product_id=p.product_id;
+
+14.Get a list of all customers who have placed orders, including those with no payment records. Use a FULL OUTER JOIN between the customers and payments tables.
+
+select c.customer_name
+from customers c inner join sales s 
+on c.customer_id=s.customer_id
+                     left join payments p
+on p.order_id=s.order_id;
+
+15.Find the total number of completed orders made by customers from the state 'Delhi' (use INNER JOIN between customers and sales and apply a WHERE condition).
+
+select count(*)
+from customers c inner join  sales s
+on c.customer_id=s.customer_id
+where c.state='Delhi' and s.order_status='Completed';
+
+16.Retrieve a list of products ordered by customers from the state 'Karnataka' with price greater than 10,000 (use INNER JOIN between sales, customers, and products).
+
+select p.product_name
+from customers c inner join  sales s
+on c.customer_id=s.customer_id
+                     join products p
+on s.product_id=p.product_id
+where c.state='Karnataka' and p.price>10000;
+
+17.List all customers who have placed orders where the product category is 'Accessories' and the order status is 'Completed' (use INNER JOIN with sales, customers, and products).
+
+select c.customer_name
+from customers c inner join  sales s
+on c.customer_id=s.customer_id
+                     join products p
+on s.product_id=p.product_id
+where s.order_status='Completed' and p.category='Accessories';
+
+18.Show the order details of customers who have paid for their orders, excluding those who have cancelled their orders (use INNER JOIN between sales and payments and apply WHERE for order_status).
+
+select s.*
+from customers c inner join sales s
+on c.customer_id=s.customer_id
+                       join payments p
+on s.order_id=p.order_id
+where s.order_status!='Cancelled';
+
+19.Retrieve products ordered by customers who are in the 'Gujarat' state and whose total order price is greater than 15,000 (use INNER JOIN between sales, customers, and products).
+
+select p.product_name
+from customers c inner join  sales s
+on c.customer_id=s.customer_id
+                     join products p
+on s.product_id=p.product_id
+where c.state='Gujarat' and c.customer_id in (select customer_id
+                                              from sales
+                                              group by customer_id
+					      having sum(quantity*price_per_unit)>15000);
+
+20.Find the total quantity of each product ordered by customers from 'Delhi' and only include products with a quantity greater than 5 (use INNER JOIN with sales, customers, and products and group by product).
+
+select p.product_name
+from products p inner join sales s
+on p.product_id=s.prduct_id
+                    join customers c
+on c.customer_id=s.customer_id
+where c.state='Delhi' 
+group by p.product_id,p.product_name
+having count(s.quantity)>5;
+
+21.Get the average payment amount per customer who has placed more than 3 orders (use INNER JOIN between payments and sales, group by customer, and apply a HAVING clause).
+
+select customer_id,round(avg(sum_amount),2)
+from(select c.customer_id,sum(quantity*price_per_unit) sum_amount
+from sales s inner join customers c
+on s.customer_id=c.customer_id
+                    join payments p
+on s.order_id=p.order_id
+where p.payment_status='Payment Successed'
+group by c.customer_id
+having count(*)>3)
+group by customer_id;
+
+22.Retrieve the total sales for each product category and only include categories where the total sales exceed 100,000 (use INNER JOIN between sales and products, group by category).
+
+select p.category ,sum(s.quantity*s.price_per_unit) total_sales
+from sales s inner join products p
+on s.product_id=p.product_id
+group by p.category
+having sum(s.quantity*s.price_per_unit)>100000;
+
+23.Show the number of customers in each state who have made purchases with a total spend greater than 50,000 (use INNER JOIN between sales and customers).
+
+select c.state,count(*) no_of_customers
+from sales s inner join customers c
+on s.customer_id=c.customer_id
+where c.customer_id in (select customer_id
+                      from sales
+                      group by customer_id
+                      having sum(quantity*price_per_unit)>50000)
+group by c.state;
+
+
+24.List the total sales by brand for products that have been ordered more than 10 times (use INNER JOIN between salesand products, group by brand).
+
+select p.brand,sum(s.quantity*s.price_per_unit) total_sales
+from sales s inner join products p
+on s.product_id=p.product_id
+group by p.brand
+having count(*)>10;
+
+25.Retrieve the total sales per customer in 'Delhi' where the order status is 'Completed', only include those with total sales greater than 50,000, and order the results by total sales (use INNER JOIN between sales and customers).
+
+select c.customer_id,sum(s.quantity*s.price_per_unit) total_sales
+from sales s inner join customers c
+on s.customer_id=c.customer_id
+where c.state='Delhi' and s.order_status='Completed'
+group by c.customer_id
+having sum(s.quantity*s.price_per_unit)>50000
+order by total_sales;
+
+
+26.Show the total quantity sold per product in the 'Accessories' category where the total quantity sold is greater than 50 and order the results by product name (use INNER JOIN between sales and products).
+
+select p.product_id,sum(s.quantity) total_quantity
+from sales s inner join products p
+on s.product_id=p.product_id
+where p.category='Accessories'
+group by p.product_id
+having sum(s.quantity)>50
+order by p.product_id;
+
+
+27.Find the total number of orders for customers from 'Maharashtra' who have spent more than 1,00,000, and order the results by the total amount spent (use INNER JOIN between sales and customers).
+
+select c.customer_id,c.customer_name,sum(s.quantity*price_per_unit) total_spent
+from sales s inner join customers c
+on s.customer_id=c.customer_id
+where c.state='Maharashtra'
+group by c.customer_id,c.customer_name
+having sum(s.quantity*price_per_unit)>100000
+order by total_spent;
+
+28.Get the number of orders per product and filter to include only products that have been ordered more than 10 times, then order the results by the highest number of orders (use INNER JOIN between sales and products).
+
+select p.product_id,p.product_name,count(*) no_of_orders
+from sales s inner products p
+on s.product_id=p.product_id
+group by p.product_id,p.product_name
+having count(*)>10
+order by no_of_orders desc;
+
+29.Retrieve the number of payments made per customer where the payment status is 'Payment Successed' and group by customer, ordering by payment count (use INNER JOIN between payments and customers).
+
+select c.customer_id,c.customer_name,count(*) no_of_payments 
+from sales s inner join customers c
+on s.customer_id=c.customer_id
+                 inner join payments p
+on s.order_id=p.order_id
+where p.payment_status='Payment Successed'
+group by c.customer_id,c.customer_name
+order by no_of_payments;
+
+30.List all orders that were placed within the year 2023 (use order_date with the EXTRACT function).
+
+select order_id
+from sales
+where extract(year from order_date)=2023;
+
+31.Retrieve customers who have made purchases in the month of January (use order_date and TO_CHAR to extract the month).
+
+select distinct c.customer_name
+from customers c inner join sales s 
+on c.customer_id=s.customer_id
+where to_char(s.order_date,'MON')='JAN';
+
+32.Calculate the number of days between the payment_date and order_date for each order (use the AGE function).
+
+select p.payment_date-s.order_date No_Of_Days
+from sales s inner join payments p
+on s.order_id=p.order_id;
+
+33.Find the total sales for each year (use EXTRACT with order_date to group by year).
+
+select count(*) Total_sales
+from sales
+group by extract(year from order_date);
+
+34.Show all orders where the shipping date is after the payment date (use date comparison).
+
+select p.order_id
+from shippings sh inner join payments p
+on sh.order_id=p.order_id
+where p.payment_date<sh.shipping_date;
+
